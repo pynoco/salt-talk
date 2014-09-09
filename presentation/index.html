@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <meta name="keywords" content="remark,remarkjs,markdown,slideshow,presentation" />
+    <meta name="description" content="A simple, in-browser, markdown-driven slideshow tool." />
+    <title>Async Processing with Python/Django</title>
+    <style type="text/css">
+      @import url(http://fonts.googleapis.com/css?family=Droid+Serif);
+      @import url(http://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(http://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body {
+        font-family: 'Droid Serif';
+      }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: 400;
+        margin-bottom: 0;
+      }
+      .remark-slide-content h1 { font-size: 3em; }
+      .remark-slide-content h2 { font-size: 2em; }
+      .remark-slide-content h3 { font-size: 1.6em; }
+      .footnote {
+        position: absolute;
+        bottom: 3em;
+      }
+      li p { line-height: 1.25em; }
+      .red { color: #fa0000; }
+      .large { font-size: 2em; }
+      a, a > code {
+        color: rgb(249, 38, 114);
+        text-decoration: none;
+      }
+      code {
+        -moz-border-radius: 5px;
+        -web-border-radius: 5px;
+        background: #e7e8e2;
+        border-radius: 5px;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+      .remark-code-line-highlighted     { background-color: #373832; }
+      .pull-left {
+        float: left;
+        width: 47%;
+      }
+      .pull-right {
+        float: right;
+        width: 47%;
+      }
+      .pull-right ~ p {
+        clear: both;
+      }
+      #slideshow .slide .content code {
+        font-size: 0.8em;
+      }
+      #slideshow .slide .content pre code {
+        font-size: 0.9em;
+        padding: 15px;
+      }
+      .inverse {
+        background: #272822;
+        color: #777872;
+        text-shadow: 0 0 20px #333;
+      }
+      .inverse h1, .inverse h2 {
+        color: #f3f3f3;
+        line-height: 0.8em;
+      }
+
+      /* Slide-specific styling */
+      #slide-inverse .footnote {
+        bottom: 12px;
+        left: 20px;
+      }
+      #slide-how .slides {
+        font-size: 0.9em;
+        position: absolute;
+        top:  151px;
+        right: 140px;
+      }
+      #slide-how .slides h3 {
+        margin-top: 0.2em;
+      }
+      #slide-how .slides .first, #slide-how .slides .second {
+        padding: 1px 20px;
+        height: 90px;
+        width: 120px;
+        -moz-box-shadow: 0 0 10px #777;
+        -webkit-box-shadow: 0 0 10px #777;
+        box-shadow: 0 0 10px #777;
+      }
+      #slide-how .slides .first {
+        background: #fff;
+        position: absolute;
+        top: 20%;
+        left: 20%;
+        z-index: 1;
+      }
+      #slide-how .slides .second {
+        position: relative;
+        background: #fff;
+        z-index: 0;
+      }
+
+      /* Two-column layout */
+      .left-column {
+        color: #777;
+        width: 20%;
+        height: 92%;
+        float: left;
+      }
+        .left-column h2:last-of-type, .left-column h3:last-child {
+          color: #000;
+        }
+      .right-column {
+        width: 75%;
+        float: right;
+        padding-top: 1em;
+      }
+    </style>
+  </head>
+  <body>
+    <textarea id="source">
+name: inverse
+layout: true
+class: center, middle, inverse
+---
+# Asynchronous Processing
+with Celery and Django
+.footnote[Presented at Fort Collins Python Web meetup August 11, 2014]
+---
+layout: false
+.left-column[
+  ## Who Am I?
+]
+.right-column[
+
+- Senior Web Application Developer at Kansas State University (Full time Remote)
+
+- Working with Django/Python for 4+ years
+
+- Twitter: @derekstegelman
+
+- GitHub: @dstegelman
+
+]
+---
+## What is it and why should I be using it?
+---
+In computer programming, asynchronous events are those occurring independently of the main program flow. Asynchronous actions are actions executed in a non-blocking scheme, allowing the main program flow to continue processing.
+---
+layout: false
+.left-column[
+  ## Differences
+]
+.right-column[
+
+## Synchronous
+
+```python
+def blocking_view(request, object_pk=None):
+    object = get_object_or_404(SomeObject, pk=object_pk)
+    object.do_method()
+
+    # Blocking.  We can't show the template until this completes
+    object.do_long_transaction()
+
+    return render(request, 'template.html')
+```
+
+## Asynchronous
+
+```python
+def blocking_view(request, object_pk=None):
+    object = get_object_or_404(SomeObject, pk=object_pk)
+    object.do_method()
+
+    # Non-blocking.  Celery takes over this code and lets us move right along
+    ObjectTransaction.delay(object)
+
+    return render(request, 'template.html')
+```
+]
+---
+layout: false
+
+  Asynchronous processing is an easy way to defer processing of
+  non-real time dependent code.
+
+```python
+from celery.task import task
+
+
+@task(name='photo_manager.clear_thumbnails')
+def clear_thumbnails(photo):
+    """ @todo - Add Comments
+        """
+
+    photo._clear_thumbnails()
+
+@task(name='photo_manager.build_thumbnails')
+def build_thumbnails(photo):
+    """ @todo - Add Comments
+        """
+    photo.make_thumbnails()
+```
+
+  If some code can be taken out of the request/response cycle
+  it should.
+
+---
+layout: false
+.left-column[
+  ## What is it?
+]
+.right-column[
+  Celery is a robust task worker solution implemented in Python that can consume tasks from numerous types of message brokers.
+  Some highlights include:
+
+- Good support for both RabbitMQ and Redis as message brokers.  (Others can be used but not officially supported.)
+
+- Easily scalable, supports autoscaling, and clustering is fairly easy.
+
+- Support for scheduled and delayed tasks
+
+- Can be monitored using Celery Flower
+
+]
+---
+.left-column[
+  ## What is it?
+  ## Why use it?
+]
+.right-column[
+Asynchronous processing can be a great solution for several different types of issues.
+
+- Long running processes that do not need to return a response to the browser
+
+- Scheduled tasks that would otherwise be performed with cron
+
+- Clean up tasks (Auto clean up bad user records, etc.)
+
+]
+---
+.left-column[
+  ## What is it?
+  ## Why use it?
+  ## Use Cases
+]
+.right-column[
+Any work that can doesn't need to return a response to the user is a good candidate for async processing.  Some use cases include:
+
+- Sending Emails
+
+- Additional processing on transactions
+
+- Sending anyaltyics
+
+- Processing thumbnails for photos
+
+- Cleaning and sanitizing data
+
+]
+---
+template: inverse
+
+## Installation and integration with Django
+---
+name: how
+
+.left-column[
+  ## Quick and easy install with Django
+]
+.right-column[
+
+- Celery can of course be used outside of Django
+
+- Install Redis or RabbitMQ for your distro
+
+```python
+pip install celery
+```
+
+Configure Celery.py
+
+```python
+from __future__ import absolute_import
+
+import os
+
+from celery import Celery
+
+from django.conf import settings
+
+# set the default Django settings module for the 'celery' program.
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'celery_demo.settings')
+
+app = Celery('celery_demo')
+
+# Using a string here means the worker will not have to
+# pickle the object when using Windows.
+app.config_from_object('django.conf:settings')
+app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
+```
+
+]
+---
+.left-column[
+  ## Quick and easy install with Django
+  ### - Settings.py
+]
+.right-column[
+```python
+from __future__ import absolute_import
+# ^^^ The above is required if you want to import from the celery
+# library.  If you don't have this then `from celery.schedules import`
+# becomes `proj.celery.schedules` in Python 2.x since it allows
+# for relative imports by default.
+
+# Celery settings
+
+BROKER_URL = 'amqp://guest:guest@localhost/'
+
+#: Only add pickle to this list if your broker is secured
+#: from unwanted access (see userguide/security.html)
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+CELERYBEAT_SCHEDULER = 'djcelery.schedulers.DatabaseScheduler'
+```
+]
+---
+template: inverse
+
+## A Basic Celery Task
+---
+.left-column[
+  ## Task Creation
+]
+.right-column[
+Celery tasks are just python methods that either inherit from the Task class
+or are decorated with ```@shared_task```
+
+```python
+from __future__ import absolute_import
+import time
+from celery import shared_task
+
+
+@shared_task
+def add(x, y):
+    print(x + y)
+    return x + y
+```
+
+Tasks are then called in your code with the ```.delay()``` method.
+
+```python
+
+from mymodule.tasks import add
+
+add.delay(3, 8)
+```
+
+]
+---
+template: inverse
+
+## Demo
+
+---
+template: inverse
+
+## Deployment with Supervisor
+
+---
+
+.left-column[
+  ## Deployment
+]
+
+.right-column[
+Deployment is straightforward.  The typical way to start and stop Celery in production
+is with Supervisor.
+
+```ini
+[program:derek_stegelman_com_celery]
+command=/srv/www/virtualenvs/derek-stegelman-com/bin/python /srv/www/projects/derek-stegelman-com/manage.py celery worker -B --concurrency=1 --loglevel=info --settings=settings.production
+directory=/srv/www/projects/derek-stegelman-com
+user=dstegelman
+autostart=true
+autorestart=true
+redirect_stderr=True
+```
+
+- Celery must be restarted after new code is deployed!!
+
+]
+---
+template: inverse
+
+## Monitoring Celery with Flower
+
+---
+
+.left-column[
+  ## Monitor with Flower
+]
+
+.right-column[
+![image](https://camo.githubusercontent.com/4b9b7f1754677a19016fedbf2cd3edeb07a3c59e/68747470733a2f2f7261772e6769746875622e636f6d2f6d6865722f666c6f7765722f6d61737465722f646f63732f73637265656e73686f74732f64617368626f6172642e706e67)
+
+]
+
+---
+template: inverse
+
+## Demo
+---
+
+.left-column[
+  ## Debugging
+]
+
+.right-column[
+
+- Propogate errors to something like Sentry.
+
+- Good idea to tail the log right after deployments for heavy use sites
+
+- Add an assert false to make sure errors are propagated in your configuration.
+
+
+]
+
+---
+
+.left-column[
+  ## Next Steps/Further Reading
+]
+
+.right-column[
+
+We just scratched the surface of what you can accomplish using Celery.  Take a
+look at the docs for further information.
+
+
+- [Celery Docs](https://celery.readthedocs.org)
+- [Celery Flower](https://github.com/mher/flower)
+- [Django Docs](https://docs.djangoproject.com/)
+- [Supervisor](http://supervisord.org)
+- [This Presentation/Demo Code](https://github.com/pynoco/celery-talk)
+
+]
+
+
+---
+name: last-page
+template: inverse
+
+## Thanks/Questions?!
+
+- Twitter: @derekstegelman
+- Github: dstegelman
+
+    </textarea>
+    <script src="http://gnab.github.com/remark/downloads/remark-0.6.5.min.js" type="text/javascript"></script>
+    <script type="text/javascript">
+      var hljs = remark.highlighter.engine;
+    </script>
+    <script src="remark.language.js" type="text/javascript"></script>
+    <script type="text/javascript">
+      var slideshow = remark.create({
+          highlightStyle: 'monokai',
+          highlightLanguage: 'remark',
+          ratio: '16:9',
+        }) ;
+    </script>
+
+  </body>
+</html>
