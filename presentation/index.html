@@ -126,7 +126,7 @@ name: inverse
 layout: true
 class: center, middle, inverse
 ---
-# Getting started with Salt
+# Getting started with Salt Stack
 .footnote[Presented at Fort Collins Python Web meetup October 13, 2014]
 ---
 layout: false
@@ -139,49 +139,121 @@ layout: false
 
 - Working with Django/Python for 4+ years
 
+- Starting to dive into Dev Ops tools (Chef, Salt, Ansible)
+
 - Twitter: @derekstegelman
 
 - GitHub: @dstegelman
 
 ]
 ---
-## What is it and why should I be using it?
----
-In computer programming, asynchronous events are those occurring independently of the main program flow. Asynchronous actions are actions executed in a non-blocking scheme, allowing the main program flow to continue processing.
----
+
 layout: false
 .left-column[
-  ## Differences
+  ## What is salt stack?
 ]
 .right-column[
 
-## Synchronous
+According to the Salt Stack Developers, salt stack is:
 
-```python
-def blocking_view(request, object_pk=None):
-    object = get_object_or_404(SomeObject, pk=object_pk)
-    object.do_method()
+Fast, scalable and flexible systems management software for data center automation, cloud orchestration, server provisioning, configuration management and more
 
-    # Blocking.  We can't show the template until this completes
-    object.do_long_transaction()
-
-    return render(request, 'template.html')
-```
-
-## Asynchronous
-
-```python
-def blocking_view(request, object_pk=None):
-    object = get_object_or_404(SomeObject, pk=object_pk)
-    object.do_method()
-
-    # Non-blocking.  Celery takes over this code and lets us move right along
-    ObjectTransaction.delay(object)
-
-    return render(request, 'template.html')
-```
 ]
 ---
+name: inverse
+layout: true
+class: center, middle, inverse
+---
+# Dev Ops!
+---
+
+layout: false
+.left-column[
+  ## What is IT automation, orchestration, etc.?
+]
+.right-column[
+
+Ability to express system configuration, 'state management' through code.
+
+### Similar Solutions
+
+- Chef
+
+- Puppet
+
+- Ansible
+
+]
+---
+name: inverse
+layout: true
+class: center, middle, inverse
+---
+# Why use these tools?
+---
+
+layout: false
+.left-column[
+  ## Why?
+]
+
+.right-column[
+
+- Express configuration in code
+
+- Your infrastructure can be kept in version control
+
+- Shareable/Open Source your configurations
+
+- Easily re-build entire environments
+
+- Easily scale out changes to hundreds of thousands of machines
+
+]
+---
+name: inverse
+layout: true
+class: center, middle, inverse
+---
+
+# Salt Stack Methodology
+---
+layout: false
+
+.left-column[
+
+ ## Salt Master
+]
+
+.right-column[
+The salt master dictates what needs to be ran and what configurations to use.  The salt master
+is the server in a server/client relationship.
+
+- Usually a stand alone server
+
+
+]
+
+---
+layout: false
+
+.left-column[
+  ## Salt Master
+  ## Salt Minions
+]
+
+.right-column[
+Salt minions are your client nodes.  These are the machinces that you'll be configuring.  A salt
+minion simply needs to be able to find identify it's master and it can begin recieving
+instructions.
+
+- Minions just need to know where to find the master and how to connect (auth)
+
+]
+
+---
+
+
 layout: false
 
   Asynchronous processing is an easy way to defer processing of
