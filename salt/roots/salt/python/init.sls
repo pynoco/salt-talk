@@ -6,10 +6,9 @@ python-pkgs:
       - python-crypto
       - python-setuptools
       - libxml2-dev
-      - libxslt-dev
       - libyaml-dev
       - libpq-dev
       - libpq5
       - python-pip
       - libmysqlclient-dev
-      - virtualenvwrapper
+      - libxslt-dev
