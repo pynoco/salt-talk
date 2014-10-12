@@ -22,7 +22,7 @@ Vagrant.configure("2") do |config|
     salt.minion_config = "salt/minion"
 
     ## Installs our example formula in "salt/roots/salt"
-    salt.run_highstate = true
+    #salt.run_highstate = true
 
     salt.verbose = true
 
