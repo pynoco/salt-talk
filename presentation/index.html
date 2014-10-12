@@ -4,7 +4,7 @@
     <meta http-equiv="content-type" content="text/html; charset=utf-8" />
     <meta name="keywords" content="remark,remarkjs,markdown,slideshow,presentation" />
     <meta name="description" content="A simple, in-browser, markdown-driven slideshow tool." />
-    <title>Provisioning with Salt</title>
+    <title>Salt Stack</title>
     <style type="text/css">
       @import url(http://fonts.googleapis.com/css?family=Droid+Serif);
       @import url(http://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
@@ -141,6 +141,8 @@ layout: false
 
 - Starting to dive into Dev Ops tools (Chef, Salt, Ansible)
 
+- I do *NOT* have all the answers.  Learning in progress
+
 - Twitter: @derekstegelman
 
 - GitHub: @dstegelman
@@ -156,7 +158,14 @@ layout: false
 
 According to the Salt Stack Developers, salt stack is:
 
-Fast, scalable and flexible systems management software for data center automation, cloud orchestration, server provisioning, configuration management and more
+Fast, scalable and flexible systems management software for data center automation,
+cloud orchestration, server provisioning, configuration management and more.
+
+- Easy to use
+
+- Very Fast
+
+- Uses ZeroMQ over SSH (SSH is an available option)
 
 ]
 ---
@@ -214,7 +223,7 @@ layout: false
 name: inverse
 layout: true
 class: center, middle, inverse
-
+---
 
 # Salt Stack Methodology
 ---
@@ -231,6 +240,8 @@ is the server in a server/client relationship.
 
 - Usually a stand alone server
 
+- Target specific minions or groups of minions via regex to determine
+what gets run on what target.
 
 ]
 
@@ -244,10 +255,14 @@ layout: false
 
 .right-column[
 Salt minions are your client nodes.  These are the machinces that you'll be configuring.  A salt
-minion simply needs to be able to find identify it's master and it can begin recieving
+minion simply needs to be able to find and identify it's master and it can begin recieving
 instructions.
 
 - Minions just need to know where to find the master and how to connect (auth)
+
+- Must be installed on all your receiving nodes (DB, Web Nodes, etc.)
+
+- Minions have a given "role" by name that they use to identify themselves (db1, db2, etc.)
 
 ]
 
@@ -255,8 +270,9 @@ instructions.
 name: inverse
 layout: true
 class: center, middle, inverse
+---
 
-# Salt Basics
+# Salt States, Pillars, & Grains
 
 ---
 layout: false
@@ -264,16 +280,27 @@ layout: false
   ## Syntax
 ]
 .right-column[
-  Salt states are expressed as .sls in YAML syntax.
+  Salt states are expressed as .sls in YAML syntax.  Salt states are farily
+  easy to understand there is exetensive documentation.
 
--
+- This example salt state installs some standard apt packages for Python.
 
-- Easily scalable, supports autoscaling, and clustering is fairly easy.
-
-- Support for scheduled and delayed tasks
-
-- Can be monitored using Celery Flower
-
+``` YAML
+python-pkgs:
+  pkg.installed:
+    - names:
+      - python2.7-dev
+      - python-virtualenv
+      - python-crypto
+      - python-setuptools
+      - libxml2-dev
+      - libyaml-dev
+      - libpq-dev
+      - libpq5
+      - python-pip
+      - libmysqlclient-dev
+      - libxslt-dev
+```
 ]
 ---
 .left-column[
@@ -281,15 +308,50 @@ layout: false
   ## Templating
 ]
 .right-column[
-Asynchronous processing can be a great solution for several different types of issues.
 
-- Long running processes that do not need to return a response to the browser
+You can easily create templates for your configuration files that
+salt can then copy and provide to your hosts.
 
-- Scheduled tasks that would otherwise be performed with cron
+- Salt users ``pillars`` to allow for configuration of these files
 
-- Clean up tasks (Auto clean up bad user records, etc.)
+- Jinja2 for templating (Easy to learn)
+
+- Becomes very useful when setting up repetative files for software like
+Nginx and Supervisor
+
+- Can template within salt states (mysql/databse.sls)
 
 ]
+
+---
+.left-column[
+  ## Syntax
+  ## Templating
+]
+
+.right-column[
+
+``` YAML
+{% from "mysql/map.jinja" import mysql with context %}
+
+include:
+  - mysql.python
+
+{% for database in salt['pillar.get']('mysql:database', []) %}
+{{ database }}:
+  mysql_database.present:
+    - host: localhost
+    - connection_user: root
+    - connection_pass: '{{ salt['pillar.get']('mysql:server:root_password', 'somepass') }}'
+    - connection_charset: utf8
+{% endfor %}
+
+```
+
+]
+
+
+
 ---
 .left-column[
   ## Syntax
@@ -297,24 +359,138 @@ Asynchronous processing can be a great solution for several different types of i
   ## Pillars
 ]
 .right-column[
-Any work that can doesn't need to return a response to the user is a good candidate for async processing.  Some use cases include:
+Pillars allow you to setup variables that can then be used using your
+jinja2 tempaltes in states and in templates.
 
-- Sending Emails
+- Can setup a list of projects and then create databases from those lists
 
-- Additional processing on transactions
-
-- Sending anyaltyics
-
-- Processing thumbnails for photos
-
-- Cleaning and sanitizing data
+- Other uses (pillar/mysql.sls)
 
 ]
+
+---
+.left-column[
+  ## Syntax
+  ## Templating
+  ## Pillars
+]
+
+.right-column[
+``` YAML
+mysql:
+  server:
+    root_password: 'somepass'
+    bind-address: 127.0.0.1
+    port: 3306
+    user: mysql
+
+  # Manage databases
+  database:
+    - derek_stegelman_com
+
+  # Manage users
+  user:
+    - name: py_dev
+      password: '1234567'
+      host: localhost
+      databases:
+        - database: derek_stegelman_com
+          grants: ['all privileges']
+
+  # Override any names defined in map.jinja
+  lookup:
+    server: mysql-server
+    client: mysql-client
+    service: mysql
+    config: /etc/mysql/my.cnf
+    python: python-mysqldb
+```
+]
+
+
+---
+
+.left-column[
+  ## Syntax
+  ## Templating
+  ## Pillars
+  ## Grains
+]
+.right-column[
+Grains give you details about the underlying operating system.
+
+- Allows you to make different decisions or variables based upon what you are
+currently running
+
+- mysql/map.jinja
+
+]
+
+---
+.left-column[
+  ## Syntax
+  ## Templating
+  ## Pillars
+  ## Grains
+]
+.right-column[
+``` YAML
+{% set mysql = salt['grains.filter_by']({
+    'Debian': {
+        'server': 'mysql-server',
+        'client': 'mysql-client',
+        'service': 'mysql',
+        'config': '/etc/mysql/my.cnf',
+        'python': 'python-mysqldb',
+    },
+    'RedHat': {
+        'server': 'mysql-server',
+        'client': 'mysql',
+        'service': 'mysqld',
+        'config': '/etc/my.cnf',
+        'python': 'MySQL-python',
+    },
+    'Gentoo': {
+        'server': 'dev-db/mysql',
+        'client': 'dev-db/mysql',
+        'service': 'mysql',
+        'config': '/etc/mysql/my.cnf',
+        'python': 'dev-python/mysql-python',
+    },
+    'FreeBSD': {
+        'server': 'mysql56-server',
+        'client': 'mysql56-client',
+        'service': 'mysql-server',
+        'config': '/usr/local/etc/my.cnf',
+        'python': 'pymysql',
+        'mysql_size': 'medium',
+    },
+}, merge=salt['pillar.get']('mysql:lookup')) %}
+```
+
+]
+---
+
+
+.left-column[
+  ## Vagrant
+]
+.right-column[
+
+Vagrant has built in support for Salt states as a provisioning mechanisim.
+
+- Salt states are run "masterless"
+
+- Easily testable
+
+]
+
+
 ---
 
 template: inverse
 
-## Demo
+## Vagrant Demo
 ---
 
 .left-column[
@@ -323,35 +499,18 @@ template: inverse
 
 .right-column[
 
-- Propogate errors to something like Sentry.
+- Salt is easy to learn and easy to use, especially in a Vagrant/Masterless setup.
 
-- Good idea to tail the log right after deployments for heavy use sites
+- Salt is a good way to manage your infrastructure, but often has lots of bloat
+for smaller setups.
 
-- Add an assert false to make sure errors are propagated in your configuration.
+- Salt is losing steam in the community in favor of ansible/chef.
 
+- Good documentation
 
-]
-
----
-.left-column[
-  ## Conclusion
-  ## Next Steps/Further Reading
-]
-
-.right-column[
-
-We just scratched the surface of what you can accomplish using Salt stack.  Take a
-look at the docs for further information.
-
-
-- [Celery Docs](https://celery.readthedocs.org)
-- [Celery Flower](https://github.com/mher/flower)
-- [Django Docs](https://docs.djangoproject.com/)
-- [Supervisor](http://supervisord.org)
-- [This Presentation/Demo Code](https://github.com/pynoco/celery-talk)
+- Code and example salt states on https://github.com/pynoco/salt-talk
 
 ]
-
 
 ---
 name: last-page
