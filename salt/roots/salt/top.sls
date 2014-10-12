@@ -5,7 +5,6 @@ base:
     - vcs
     - users
     - images
-    - postgresql
     - memcached
     - supervisor
     - rabbitmq
